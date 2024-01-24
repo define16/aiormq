@@ -187,9 +187,9 @@ class Channel(Base, AbstractChannel):
                     raise InvalidFrameError(frame)
 
                 return result
-            except (asyncio.CancelledError, asyncio.TimeoutError):
+            except (asyncio.CancelledError, asyncio.TimeoutError) as e:
                 if self.is_closed:
-                    raise
+                    raise e
 
                 log.warning(
                     "Closing channel %r because RPC call %s cancelled",
@@ -213,7 +213,7 @@ class Channel(Base, AbstractChannel):
                     ),
                 )
 
-                raise
+                raise e
 
     async def open(self, timeout: TimeoutType = None) -> spec.Channel.OpenOk:
         frame: spec.Channel.OpenOk = await self.rpc(
