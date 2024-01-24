@@ -48,8 +48,8 @@ class TaskWrapper:
     def __await__(self, *args: Any, **kwargs: Any) -> Any:
         return self.__inner().__await__()
 
-    def cancel(self) -> None:
-        return self.throw(asyncio.CancelledError())
+    def cancel(self, message: str) -> None:
+        return self.throw(asyncio.CancelledError(message))
 
     def __getattr__(self, item: str) -> Any:
         return getattr(self.task, item)

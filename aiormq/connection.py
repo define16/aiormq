@@ -543,7 +543,7 @@ class Connection(Base, AbstractConnection):
 
         async def close_writer_task() -> None:
             if not self._writer_task.done():
-                self._writer_task.cancel()
+                self._writer_task.cancel(f"Reader exited for {self.__str__()}, close_writer_task")
                 await asyncio.gather(self._writer_task, return_exceptions=True)
             try:
                 exc = task.exception()
@@ -669,7 +669,9 @@ class Connection(Base, AbstractConnection):
                     "Server connection %r was stuck. No frames were received "
                     "in %d seconds.", self, self.__heartbeat_grace_timeout,
                 )
-                self._writer_task.cancel()
+                self._writer_task.cancel(
+                    f"Server connection {self.__str__()} was stuck. No frames were received in {self.__heartbeat_grace_timeout} seconds."
+                )
             raise
 
     @property
@@ -685,7 +687,7 @@ class Connection(Base, AbstractConnection):
 
         while not self.closing.done():
             if self.is_connection_was_stuck:
-                self._reader_task.cancel()
+                self._reader_task.cancel(f"{self.loop.time() - self.__last_frame_time} > {self.__heartbeat_grace_timeout} 으로 connection_was_stuck")
                 return
 
             await asyncio.sleep(heartbeat_timeout)
@@ -696,7 +698,7 @@ class Connection(Base, AbstractConnection):
                     timeout=self.__heartbeat_grace_timeout,
                 )
             except asyncio.TimeoutError:
-                self._reader_task.cancel()
+                self._reader_task.cancel(f"{self.__heartbeat_grace_timeout} heartbeat timeout")
                 return
 
     async def __writer(self, writer: asyncio.StreamWriter) -> None:
@@ -782,9 +784,9 @@ class Connection(Base, AbstractConnection):
     ) -> None:
         log.debug("Closing connection %r cause: %r", self, ex)
         if not self._reader_task.done():
-            self._reader_task.cancel()
+            self._reader_task.cancel(f"Closing connection {self.__str__()} cause: {ex.__str__()}")
         if not self._writer_task.done():
-            self._writer_task.cancel()
+            self._writer_task.cancel(f"Closing connection {self.__str__()} cause: {ex.__str__()}")
 
         await asyncio.gather(
             self._reader_task, self._writer_task, return_exceptions=True,
